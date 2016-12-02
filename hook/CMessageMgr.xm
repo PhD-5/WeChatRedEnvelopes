@@ -1,4 +1,27 @@
 #import "CMessageMgr.h"
+#define PREFERENCEFILE "/private/var/mobile/Library/Preferences/com.yjb.wechatautpredenvelops.plist"
+
+static BOOL shouldHookFromPreference(NSString *preferenceSetting) {
+    NSString *preferenceFilePath = @PREFERENCEFILE;
+    NSMutableDictionary* plist = [[NSMutableDictionary alloc] initWithContentsOfFile:preferenceFilePath];
+    
+    if (!plist) { // Preference file not found, don't hook
+        NSLog(@"WeChat Red Envelops - Preference file not found.");
+        return FALSE;
+    }
+    else {
+        id shouldHook = [plist objectForKey:preferenceSetting];
+        if (shouldHook) {
+            [plist release];
+            return [shouldHook boolValue];
+        } 
+        else { // Property was not set, don't hook
+            NSLog(@"SSL Kill Switch - Preference not set.");
+            [plist release];
+            return FALSE;
+        }
+    }
+}
 
 %hook CMessageMgr 
 
@@ -36,3 +59,14 @@
 }
 
 %end // end hook
+
+
+%ctor { 
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    
+    if (shouldHookFromPreference(@"autoRedOn")) {
+        %init(_ungrouped);
+    }
+    
+    [pool drain];
+}
